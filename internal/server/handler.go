@@ -2,7 +2,8 @@ package server
 
 import (
 	"buoy-hub/internal/client"
-//	"buoy-hub/internal/db"
+	"buoy-hub/internal/db"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -72,16 +73,16 @@ func (s *Server) handleGPS(c *client.Client, message []byte) {
 
 	log.Printf("[GPS] %s → lat: %f, lon: %f", c.ID, gps.Latitude, gps.Longitude)
 
-	//reading := db.Reading{
-	//	Time:      time.Unix(gps.Timestamp, 0),
-	//	BuoyID:    c.ID,
-	//	Latitude:  gps.Latitude,
-	//	Longitude: gps.Longitude,
-	//}
+	reading := db.Reading{
+		Time:      time.Unix(gps.Timestamp, 0),
+		BuoyID:    c.ID,
+		Latitude:  gps.Latitude,
+		Longitude: gps.Longitude,
+	}
 
-	//if err := s.db.InsertReading(r.Context(), reading); err != nil {
-	//	log.Printf("Failed to save GPS reading: %v", err)
-	//}
+	if err := s.db.InsertReading(context.Background(), reading); err != nil {
+		log.Printf("Failed to save GPS reading: %v", err)
+	}
 }
 
 // handleImage receives raw binary image bytes from a buoy.
