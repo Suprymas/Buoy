@@ -33,6 +33,5 @@ go.work.sum
 Thumbs.db
 
 # Build output directory
-bin/
 dist/
 node_modules/

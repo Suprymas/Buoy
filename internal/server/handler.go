@@ -2,6 +2,8 @@ package server
 
 import (
 	"buoy-hub/internal/client"
+//	"buoy-hub/internal/db"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +11,14 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+// GPSMessage is the JSON structure sent by the buoy as a text frame
+type GPSMessage struct {
+	BuoyID    string  `json:"buoy_id"`
+	Latitude  float64 `json:"lat"`
+	Longitude float64 `json:"lon"`
+	Timestamp int64   `json:"time"` // unix timestamp from ESP32
+}
 
 // HandleConnection upgrades the HTTP request to a WebSocket
 // and starts listening for messages from the buoy.
@@ -32,9 +42,10 @@ func (s *Server) HandleConnection(w http.ResponseWriter, r *http.Request) {
 }
 
 // readLoop continuously reads messages from a connected buoy.
+// Text frames = GPS JSON, Binary frames = raw image bytes
 func (s *Server) readLoop(c *client.Client) {
 	for {
-		_, message, err := c.Conn.ReadMessage()
+		msgType, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("Read error from %s: %v", c.ID, err)
@@ -42,18 +53,42 @@ func (s *Server) readLoop(c *client.Client) {
 			break
 		}
 
-		log.Printf("[MSG] %s @ %s: %s", c.ID, time.Now().Format("15:04:05"), string(message))
-		s.handleMessage(c, message)
+		switch msgType {
+		case websocket.TextMessage:
+			go s.handleGPS(c, message)
+		case websocket.BinaryMessage:
+			go s.handleImage(c, message)
+		}
 	}
 }
 
-// handleMessage processes an incoming message from a buoy.
-// This is where you'll add GPS parsing, image saving, DB writes, etc.
-func (s *Server) handleMessage(c *client.Client, message []byte) {
-	reply := fmt.Sprintf("[%s] Echo: %s", time.Now().Format("15:04:05"), string(message))
-	if err := c.Conn.WriteMessage(websocket.TextMessage, []byte(reply)); err != nil {
-		log.Printf("Write error to %s: %v", c.ID, err)
+// handleGPS parses a GPS JSON message and saves it to TimescaleDB
+func (s *Server) handleGPS(c *client.Client, message []byte) {
+	var gps GPSMessage
+	if err := json.Unmarshal(message, &gps); err != nil {
+		log.Printf("Failed to parse GPS from %s: %v", c.ID, err)
+		return
 	}
+
+	log.Printf("[GPS] %s → lat: %f, lon: %f", c.ID, gps.Latitude, gps.Longitude)
+
+	//reading := db.Reading{
+	//	Time:      time.Unix(gps.Timestamp, 0),
+	//	BuoyID:    c.ID,
+	//	Latitude:  gps.Latitude,
+	//	Longitude: gps.Longitude,
+	//}
+
+	//if err := s.db.InsertReading(r.Context(), reading); err != nil {
+	//	log.Printf("Failed to save GPS reading: %v", err)
+	//}
+}
+
+// handleImage receives raw binary image bytes from a buoy.
+// TODO: save to MinIO and update the image_url in the last reading
+func (s *Server) handleImage(c *client.Client, message []byte) {
+	log.Printf("[IMG] %s → received %d bytes", c.ID, len(message))
+	// MinIO upload will go here
 }
 
 // disconnect cleans up a buoy connection.
