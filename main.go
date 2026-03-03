@@ -3,6 +3,7 @@ package main
 import (
 	"buoy-hub/internal/db"
 	"buoy-hub/internal/server"
+	"buoy-hub/internal/storage"
 	"context"
 	"log"
 	"net/http"
@@ -18,8 +19,12 @@ func main() {
 	}
 	defer database.Close()
 
-	// Create server with DB reference
-	s := server.New(database)
+	store, err := storage.New(ctx)
+	if err != nil {
+		log.Fatalf("Failed to connect to MinIO: %v", err)
+	}
+
+	s := server.New(database, store)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.HandleConnection)

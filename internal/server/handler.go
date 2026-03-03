@@ -86,10 +86,13 @@ func (s *Server) handleGPS(c *client.Client, message []byte) {
 }
 
 // handleImage receives raw binary image bytes from a buoy.
-// TODO: save to MinIO and update the image_url in the last reading
 func (s *Server) handleImage(c *client.Client, message []byte) {
-	log.Printf("[IMG] %s → received %d bytes", c.ID, len(message))
-	// MinIO upload will go here
+    url, err := s.storage.UploadImage(context.Background(), c.ID, message)
+    if err != nil {
+        log.Printf("Failed to upload image from %s: %v", c.ID, err)
+        return
+    }
+    log.Printf("[IMG] %s → %s", c.ID, url)
 }
 
 // disconnect cleans up a buoy connection.
