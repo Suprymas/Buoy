@@ -2,22 +2,22 @@ package server
 
 import (
 	"buoy-hub/internal/client"
+	"buoy-hub/internal/db"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
-// Server manages all connected buoy clients
+// Server manages all connected buoy clients and database access
 type Server struct {
 	clients map[string]*client.Client
-	logs    []LogEntry
-	mu      sync.RWMutex
+	db      *db.DB
 }
 
-func New() *Server {
+func New(database *db.DB) *Server {
 	return &Server{
 		clients: make(map[string]*client.Client),
+		db:      database,
 	}
 }
 
