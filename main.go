@@ -12,6 +12,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.HandleConnection)
 	mux.HandleFunc("/health", server.HealthHandler)
+	mux.HandleFunc("/logs", s.LogsHandler)
 	mux.Handle("/", server.FrontendHandler("frontend/dist"))
 
 	addr := ":8080"

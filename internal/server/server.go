@@ -3,6 +3,7 @@ package server
 import (
 	"buoy-hub/internal/client"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -10,6 +11,8 @@ import (
 // Server manages all connected buoy clients
 type Server struct {
 	clients map[string]*client.Client
+	logs    []LogEntry
+	mu      sync.RWMutex
 }
 
 func New() *Server {

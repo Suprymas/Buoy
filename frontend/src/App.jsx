@@ -1,20 +1,94 @@
 import { useEffect, useRef, useState } from "react";
 
-const initialMessages = [
-  { id: "boot", type: "system", text: "Frontend ready. Connect to start sending websocket messages." },
-];
-
 function createSocketUrl() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${window.location.host}/ws`;
 }
 
+function createSocketHostLabel() {
+  return `${window.location.hostname}:${window.location.port || "80"}`;
+}
+
+function parseIncoming(raw) {
+  try {
+    const data = JSON.parse(raw);
+    return typeof data === "object" && data ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildBuoyState(current, payload, rawText) {
+  const buoyId = payload.buoyId || payload.id || "unknown-boey";
+  const existing = current[buoyId] || {
+    id: buoyId,
+    imageUrl: "",
+    status: "online",
+    gps: "waiting",
+    compass: "waiting",
+  };
+
+  const telemetry = payload.telemetry && typeof payload.telemetry === "object" ? payload.telemetry : {};
+  const nextGps = payload.gps || telemetry.gps || existing.gps;
+  const nextCompass = payload.compass || telemetry.compass || existing.compass;
+  const nextImageUrl = payload.imageBase64
+    ? `data:image/jpeg;base64,${payload.imageBase64}`
+    : payload.imageUrl || existing.imageUrl;
+
+  return {
+    ...current,
+    [buoyId]: {
+      ...existing,
+      imageUrl: nextImageUrl,
+      gps: nextGps,
+      compass: nextCompass,
+      status: payload.status || payload.message || rawText || existing.status,
+    },
+  };
+}
+
+function formatLogEntry(entry) {
+  const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString("en-GB", { hour12: false }) : "";
+
+  if (entry.event === "message") {
+    return `[MSG] ${entry.clientId || "unknown"} @ ${time}: ${entry.message || ""}`;
+  }
+
+  if (entry.event === "connected") {
+    return `[+] ${entry.clientId || "unknown"} @ ${time}: ${entry.message || "client connected"}`;
+  }
+
+  if (entry.event === "disconnected") {
+    return `[-] ${entry.clientId || "unknown"} @ ${time}: ${entry.message || "client disconnected"}`;
+  }
+
+  if (entry.event === "read_error") {
+    return `[ERR] ${entry.clientId || "unknown"} @ ${time}: ${entry.message || "read error"}`;
+  }
+
+  const parts = [`[${entry.timestamp}]`, entry.level, entry.event];
+
+  if (entry.clientId) {
+    parts.push(`client=${entry.clientId}`);
+  }
+
+  if (entry.message) {
+    parts.push(entry.message);
+  }
+
+  return parts.join(" | ");
+}
+
 export default function App() {
-  const [health, setHealth] = useState("checking");
-  const [status, setStatus] = useState("disconnected");
-  const [draft, setDraft] = useState("ping from React");
-  const [messages, setMessages] = useState(initialMessages);
+  const [menu, setMenu] = useState("dashboard");
+  const [health, setHealth] = useState("offline");
+  const [socketStatus, setSocketStatus] = useState("disconnected");
+  const [boeys, setBoeys] = useState({});
+  const [logs, setLogs] = useState([]);
   const socketRef = useRef(null);
+  const socketHost = createSocketHostLabel();
+
+  const connectedBoeys = Object.values(boeys).sort((left, right) => left.id.localeCompare(right.id));
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +102,7 @@ export default function App() {
       })
       .then((data) => {
         if (!cancelled) {
-          setHealth(data.status ?? "unknown");
+          setHealth(data.status === "ok" ? "online" : "offline");
         }
       })
       .catch(() => {
@@ -37,128 +111,149 @@ export default function App() {
         }
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function appendMessage(type, text) {
-    setMessages((current) => [
-      ...current,
-      { id: `${Date.now()}-${current.length}`, type, text },
-    ]);
-  }
-
-  function connect() {
-    if (socketRef.current && socketRef.current.readyState <= WebSocket.OPEN) {
-      return;
-    }
+    fetch("/logs")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`logs request failed: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled) {
+          const nextLogs = Array.isArray(data.logs) ? data.logs : [];
+          setLogs(nextLogs);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLogs([]);
+        }
+      });
 
     const socket = new WebSocket(createSocketUrl());
     socketRef.current = socket;
-    setStatus("connecting");
+    setSocketStatus("disconnected");
 
     socket.onopen = () => {
-      setStatus("connected");
-      appendMessage("system", "WebSocket connected.");
+      setSocketStatus("connected");
     };
 
     socket.onmessage = (event) => {
-      appendMessage("incoming", event.data);
+      const rawText = String(event.data);
+      const payload = parseIncoming(rawText);
+
+      if (payload?.type === "server_log" && payload.entry) {
+        setLogs((current) => [payload.entry, ...current].slice(0, 500));
+      }
+
+      if (payload && (payload.buoyId || payload.id)) {
+        setBoeys((current) => buildBuoyState(current, payload, rawText));
+      }
     };
 
     socket.onerror = () => {
-      appendMessage("system", "WebSocket error.");
+      setSocketStatus("error");
     };
 
     socket.onclose = () => {
-      setStatus("disconnected");
-      appendMessage("system", "WebSocket closed.");
+      setSocketStatus("disconnected");
       socketRef.current = null;
     };
-  }
 
-  function disconnect() {
-    socketRef.current?.close();
-  }
-
-  function sendMessage(event) {
-    event.preventDefault();
-
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN || !draft.trim()) {
-      return;
-    }
-
-    socketRef.current.send(draft);
-    appendMessage("outgoing", draft);
-    setDraft("");
-  }
+    return () => {
+      cancelled = true;
+      socket.close();
+    };
+  }, []);
 
   return (
-    <main className="shell">
-      <section className="hero">
-        <p className="eyebrow">React + Go template</p>
-        <h1>Buoy control surface</h1>
-        <p className="lede">
-          A starter frontend for the Go websocket server. Use it as the base for telemetry,
-          camera feeds, operator controls, and device diagnostics.
-        </p>
-      </section>
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="topbar-status">
+          <span className="status-badge">Server: {health}</span>
+          <span className="status-badge">Realtime: {socketStatus === "connected" ? "connected" : "disconnected"}</span>
+          <span className="status-badge">WS_HOST: {socketHost}</span>
+        </div>
+        <nav className="menu-bar">
+          <button
+            type="button"
+            className={menu === "dashboard" ? "nav-link active" : "nav-link"}
+            onClick={() => setMenu("dashboard")}
+          >
+            Dashboard
+          </button>
+          <button
+            type="button"
+            className={menu === "logs" ? "nav-link active" : "nav-link"}
+            onClick={() => setMenu("logs")}
+          >
+            Logs
+          </button>
+        </nav>
+      </header>
 
-      <section className="status-grid">
-        <article className="panel">
-          <span className="label">HTTP health</span>
-          <strong>{health}</strong>
-        </article>
-        <article className="panel">
-          <span className="label">WebSocket</span>
-          <strong>{status}</strong>
-        </article>
-      </section>
+      {menu === "dashboard" && <DashboardView boeys={connectedBoeys} />}
+      {menu === "logs" && <LogsView logs={logs} />}
+    </main>
+  );
+}
 
-      <section className="workspace">
-        <article className="panel console">
-          <div className="console-header">
-            <h2>Connection</h2>
-            <div className="actions">
-              <button type="button" onClick={connect} disabled={status !== "disconnected"}>
-                Connect
-              </button>
-              <button type="button" className="ghost" onClick={disconnect} disabled={status === "disconnected"}>
-                Disconnect
-              </button>
-            </div>
-          </div>
-
-          <form className="composer" onSubmit={sendMessage}>
-            <input
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Enter a websocket message"
-            />
-            <button type="submit" disabled={status !== "connected"}>
-              Send
-            </button>
-          </form>
-
-          <div className="log">
-            {messages.map((message) => (
-              <div key={message.id} className={`message ${message.type}`}>
-                {message.text}
+function DashboardView({ boeys }) {
+  return (
+    <section className="page">
+      {boeys.length === 0 ? (
+        <article className="panel empty-panel">[NO BOEYS CONNECTED]</article>
+      ) : (
+        <div className="dashboard-grid">
+          {boeys.map((boey) => (
+            <article key={boey.id} className="panel dashboard-card">
+              <div className="dashboard-card-header">
+                <strong>{boey.id}</strong>
+                <span>{boey.status}</span>
               </div>
+
+              <div className="video-feed small">
+                {boey.imageUrl ? (
+                  <img src={boey.imageUrl} alt={`${boey.id} video feed`} />
+                ) : (
+                  <div className="video-off">[VIDEO OFF]</div>
+                )}
+              </div>
+
+              <div className="mini-status">
+                <div className="mini-field">
+                  <span>GPS</span>
+                  <strong>{String(boey.gps)}</strong>
+                </div>
+                <div className="mini-field">
+                  <span>Compass</span>
+                  <strong>{String(boey.compass)}</strong>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LogsView({ logs }) {
+  return (
+    <section className="page">
+      <article className="panel logs-panel">
+        {logs.length === 0 ? (
+          <div className="logs-empty">[NO LOGS]</div>
+        ) : (
+          <div className="logs-list">
+            {logs.map((entry) => (
+              <pre key={entry.id} className="log-entry">
+                {formatLogEntry(entry)}
+              </pre>
             ))}
           </div>
-        </article>
-
-        <article className="panel notes">
-          <h2>Project layout</h2>
-          <ul>
-            <li>`frontend/` contains the React app and Vite config.</li>
-            <li>`/health` and `/ws` stay on the Go server.</li>
-            <li>Production traffic can be served from one binary plus `frontend/dist`.</li>
-          </ul>
-        </article>
-      </section>
-    </main>
+        )}
+      </article>
+    </section>
   );
 }
