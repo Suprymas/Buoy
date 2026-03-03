@@ -1,7 +1,6 @@
 #include <WiFi.h>
 #include <WebSocketsClient.h>
 #include "esp_camera.h"
-#include "mbedtls/base64.h"
 
 // XIAO ESP32S3 Sense camera pin map based on Seeed examples for CAMERA_MODEL_XIAO_ESP32S3.
 #define PWDN_GPIO_NUM   -1
@@ -44,9 +43,7 @@ void connectWebSocket();
 void onWebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
 void sendFrame();
 void sendTelemetry();
-String buildFrameJson(const String& imageBase64);
 String buildTelemetryJson();
-String base64Encode(const uint8_t* data, size_t len);
 String fakeGps();
 String fakeCompass();
 
@@ -189,37 +186,15 @@ void sendFrame() {
     return;
   }
 
-  String imageBase64 = base64Encode(frame->buf, frame->len);
+  bool ok = webSocket.sendBIN(frame->buf, frame->len);
   esp_camera_fb_return(frame);
 
-  if (imageBase64.length() == 0) {
-    Serial.println("Failed to encode frame");
-    return;
-  }
-
-  String payload = buildFrameJson(imageBase64);
-  bool ok = webSocket.sendTXT(payload);
-  Serial.printf("Frame sent: %s, payload bytes=%u\n", ok ? "ok" : "failed", payload.length());
+  Serial.printf("Binary frame sent: %s, bytes=%u\n", ok ? "ok" : "failed", frame->len);
 }
 
 void sendTelemetry() {
   String payload = buildTelemetryJson();
   webSocket.sendTXT(payload);
-}
-
-String buildFrameJson(const String& imageBase64) {
-  String json;
-  json.reserve(imageBase64.length() + 192);
-  json += "{\"buoyId\":\"";
-  json += BUOY_ID;
-  json += "\",\"status\":\"online\",\"gps\":\"";
-  json += fakeGps();
-  json += "\",\"compass\":\"";
-  json += fakeCompass();
-  json += "\",\"imageBase64\":\"";
-  json += imageBase64;
-  json += "\"}";
-  return json;
 }
 
 String buildTelemetryJson() {
@@ -233,30 +208,6 @@ String buildTelemetryJson() {
   json += fakeCompass();
   json += "\"}";
   return json;
-}
-
-String base64Encode(const uint8_t* data, size_t len) {
-  size_t encodedLen = 0;
-  int rc = mbedtls_base64_encode(nullptr, 0, &encodedLen, data, len);
-  if (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL || encodedLen == 0) {
-    return "";
-  }
-
-  unsigned char* buffer = static_cast<unsigned char*>(ps_malloc(encodedLen + 1));
-  if (buffer == nullptr) {
-    return "";
-  }
-
-  rc = mbedtls_base64_encode(buffer, encodedLen, &encodedLen, data, len);
-  if (rc != 0) {
-    free(buffer);
-    return "";
-  }
-
-  buffer[encodedLen] = '\0';
-  String out(reinterpret_cast<char*>(buffer));
-  free(buffer);
-  return out;
 }
 
 String fakeGps() {
