@@ -371,17 +371,17 @@ export default function App() {
           </button>
           <button
             type="button"
-            className={menu === "logs" ? "nav-link active" : "nav-link"}
-            onClick={() => setMenu("logs")}
-          >
-            Logs
-          </button>
-          <button
-            type="button"
             className={menu === "map" ? "nav-link active" : "nav-link"}
             onClick={() => setMenu("map")}
           >
             Map
+          </button>
+          <button
+            type="button"
+            className={menu === "logs" ? "nav-link active" : "nav-link"}
+            onClick={() => setMenu("logs")}
+          >
+            Logs
           </button>
         </nav>
       </header>
