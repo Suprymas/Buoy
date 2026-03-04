@@ -24,14 +24,14 @@
 static const char* WIFI_SSID = "YOUR_WIFI_SSID";
 static const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-static const char* WS_HOST = "192.168.1.100";
+static const char* WS_HOST = "10.89.149.15";
 static const uint16_t WS_PORT = 8080;
 static const char* WS_PATH = "/ws";
 
 static const char* BUOY_ID = "boey-01";
 
 static const unsigned long IMAGE_INTERVAL_MS = 1000;
-static const unsigned long TELEMETRY_INTERVAL_MS = 200;
+static const unsigned long TELEMETRY_INTERVAL_MS = 1000;
 
 WebSocketsClient webSocket;
 unsigned long lastImageAt = 0;

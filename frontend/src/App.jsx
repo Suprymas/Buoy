@@ -1,12 +1,54 @@
 import { useEffect, useRef, useState } from "react";
 
+function trimTrailingSlash(value) {
+  return value.replace(/\/+$/, "");
+}
+
+function createHttpBaseUrl() {
+  const configuredBase = import.meta.env.VITE_BACKEND_BASE_URL?.trim();
+  return configuredBase ? trimTrailingSlash(configuredBase) : window.location.origin;
+}
+
 function createSocketUrl() {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws?role=viewer`;
+  const configuredSocketBase = import.meta.env.VITE_WS_BASE_URL?.trim();
+
+  if (configuredSocketBase) {
+    return `${trimTrailingSlash(configuredSocketBase)}/ws?role=viewer`;
+  }
+
+  const backendBase = createHttpBaseUrl();
+  const protocol = backendBase.startsWith("https://") ? "wss://" : "ws://";
+  const host = backendBase.replace(/^https?:\/\//, "");
+  return `${protocol}${host}/ws?role=viewer`;
 }
 
 function createSocketHostLabel() {
-  return `${window.location.hostname}:${window.location.port || "80"}`;
+  const configuredSocketBase = import.meta.env.VITE_WS_BASE_URL?.trim();
+  if (configuredSocketBase) {
+    return trimTrailingSlash(configuredSocketBase);
+  }
+
+  return createHttpBaseUrl().replace(/^https?:\/\//, "");
+}
+
+function createApiUrl(path) {
+  return `${createHttpBaseUrl()}${path}`;
+}
+
+function resolveImageUrl(imageUrl) {
+  if (!imageUrl) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${createHttpBaseUrl()}${imageUrl}`;
+  }
+
+  return `${createHttpBaseUrl()}/${imageUrl}`;
 }
 
 function parseIncoming(raw) {
@@ -33,7 +75,7 @@ function buildBuoyState(current, payload, rawText) {
   const nextCompass = payload.compass || telemetry.compass || existing.compass;
   const nextImageUrl = payload.imageBase64
     ? `data:image/jpeg;base64,${payload.imageBase64}`
-    : payload.imageUrl || existing.imageUrl;
+    : resolveImageUrl(payload.imageUrl) || existing.imageUrl;
 
   return {
     ...current,
@@ -117,7 +159,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/health")
+    fetch(createApiUrl("/health"))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`health request failed: ${response.status}`);
@@ -135,7 +177,7 @@ export default function App() {
         }
       });
 
-    fetch("/logs")
+    fetch(createApiUrl("/logs"))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`logs request failed: ${response.status}`);
@@ -154,7 +196,7 @@ export default function App() {
         }
       });
 
-    fetch("/api/buoys")
+    fetch(createApiUrl("/api/buoys"))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`buoys request failed: ${response.status}`);
