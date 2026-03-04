@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { divIcon } from "leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, "");
@@ -58,6 +60,104 @@ function parseIncoming(raw) {
   } catch {
     return null;
   }
+}
+
+function parseGpsCoordinates(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const [latText, lonText] = value.split(",");
+  const latitude = Number.parseFloat(latText?.trim() || "");
+  const longitude = Number.parseFloat(lonText?.trim() || "");
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  return [latitude, longitude];
+}
+
+function parseDirectionDegrees(value) {
+  const degrees = Number.parseFloat(String(value ?? "").trim());
+  if (!Number.isFinite(degrees)) {
+    return 0;
+  }
+
+  return ((degrees % 360) + 360) % 360;
+}
+
+function createBuoyIcon(name, direction) {
+  return divIcon({
+    className: "buoy-marker-shell",
+    html: `
+      <div class="buoy-marker" style="--direction:${direction}deg">
+        <div class="buoy-dot">
+          <div class="buoy-arrow"></div>
+        </div>
+        <div class="buoy-label">${name}</div>
+      </div>
+    `,
+    iconSize: [140, 64],
+    iconAnchor: [18, 18],
+    popupAnchor: [16, -18],
+  });
+}
+
+function FitMapToBuoys({ positions }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (positions.length === 0) {
+      return;
+    }
+
+    if (positions.length === 1) {
+      map.setView(positions[0], 16, { animate: true });
+      return;
+    }
+
+    map.fitBounds(positions, {
+      padding: [20, 20],
+      maxZoom: 18,
+      animate: true,
+    });
+  }, [map, positions]);
+
+  return null;
+}
+
+function mergeBuoySources(dbBuoys, liveBuoys) {
+  const merged = new Map();
+
+  for (const buoy of dbBuoys) {
+    const buoyId = buoy.buoyId || buoy.id;
+    if (!buoyId) {
+      continue;
+    }
+
+    merged.set(buoyId, {
+      ...buoy,
+      id: buoy.id || buoyId,
+      buoyId,
+    });
+  }
+
+  for (const buoy of liveBuoys) {
+    const buoyId = buoy.buoyId || buoy.id;
+    if (!buoyId) {
+      continue;
+    }
+
+    merged.set(buoyId, {
+      ...(merged.get(buoyId) || {}),
+      ...buoy,
+      id: buoy.id || buoyId,
+      buoyId,
+    });
+  }
+
+  return Array.from(merged.values()).sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function buildBuoyState(current, payload, rawText) {
@@ -155,6 +255,7 @@ export default function App() {
   const socketHost = createSocketHostLabel();
 
   const connectedBoeys = Object.values(boeys).sort((left, right) => left.id.localeCompare(right.id));
+  const allBoeys = mergeBuoySources(dbBuoys, connectedBoeys);
 
   useEffect(() => {
     let cancelled = false;
@@ -275,11 +376,19 @@ export default function App() {
           >
             Logs
           </button>
+          <button
+            type="button"
+            className={menu === "map" ? "nav-link active" : "nav-link"}
+            onClick={() => setMenu("map")}
+          >
+            Map
+          </button>
         </nav>
       </header>
 
       {menu === "dashboard" && <DashboardView boeys={connectedBoeys} />}
       {menu === "logs" && <LogsView dbBuoys={dbBuoys} dbConfig={dbConfig} dbStatus={dbStatus} logs={logs} onDbConfigChange={setDbConfig} />}
+      {menu === "map" && <MapView boeys={allBoeys} />}
     </main>
   );
 }
@@ -403,6 +512,73 @@ function LogsView({ dbBuoys, dbConfig, dbStatus, logs, onDbConfigChange }) {
                 {formatLogEntry(entry)}
               </pre>
             ))}
+          </div>
+        )}
+      </article>
+    </section>
+  );
+}
+
+function MapView({ boeys }) {
+  const mappedBoeys = boeys
+    .map((buoy) => {
+      const coordinates = parseGpsCoordinates(buoy.gps);
+      if (!coordinates) {
+        return null;
+      }
+
+      return {
+        ...buoy,
+        coordinates,
+        direction: parseDirectionDegrees(buoy.compass),
+      };
+    })
+    .filter(Boolean);
+
+  const center = mappedBoeys.length > 0 ? mappedBoeys[0].coordinates : [54.6872, 25.2797];
+
+  return (
+    <section className="page">
+      <article className="panel map-panel">
+        <div className="logs-section-header">
+          <strong>Buoy Map</strong>
+          <span>{mappedBoeys.length} positioned</span>
+        </div>
+        {mappedBoeys.length === 0 ? (
+          <div className="logs-empty">[NO GPS DATA]</div>
+        ) : (
+          <div className="map-frame">
+            <MapContainer center={center} zoom={7} scrollWheelZoom className="map-canvas">
+              <FitMapToBuoys positions={mappedBoeys.map((buoy) => buoy.coordinates)} />
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {mappedBoeys.map((buoy) => (
+                <Marker
+                  key={buoy.buoyId || buoy.id}
+                  position={buoy.coordinates}
+                  icon={createBuoyIcon(buoy.buoyId || buoy.id, buoy.direction)}
+                >
+                  <Popup>
+                    <strong>{buoy.buoyId || buoy.id}</strong>
+                    <br />
+                    {buoy.gps}
+                    <br />
+                    Direction: {buoy.direction}°
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+            <div className="map-overlay">
+              {mappedBoeys.map((buoy) => (
+                <div key={buoy.buoyId || buoy.id} className="map-chip">
+                  <span className="map-chip-dot" />
+                  <strong>{buoy.buoyId || buoy.id}</strong>
+                  <span>{buoy.gps}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </article>
