@@ -99,8 +99,8 @@ function createBuoyIcon(name, direction) {
       </div>
     `,
     iconSize: [140, 64],
-    iconAnchor: [18, 18],
-    popupAnchor: [16, -18],
+    iconAnchor: [19, 51],
+    popupAnchor: [0, -51],
   });
 }
 

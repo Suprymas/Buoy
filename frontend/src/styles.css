@@ -237,7 +237,7 @@ input {
 .buoy-marker {
   position: relative;
   width: 140px;
-  height: 64px;
+  height: 84px;
 }
 
 .buoy-arrow {
@@ -279,7 +279,7 @@ input {
 .buoy-dot {
   position: absolute;
   left: 4px;
-  top: 12px;
+  top: 36px;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -292,21 +292,24 @@ input {
 
 .buoy-label {
   position: absolute;
-  left: 40px;
-  top: 10px;
-  max-width: 94px;
-  padding: 0.4rem 0.7rem;
-  border-radius: 12px;
+  left: 19px;
+  top: 8px;
+  min-width: 28px;
+  max-width: 72px;
+  padding: 0.18rem 0.35rem;
+  border-radius: 8px;
   background: rgba(18, 28, 38, 0.92);
   border: 1px solid #243343;
   color: #ebf3f8;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
-  font-size: 0.8rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transform: translateX(-50%);
 }
 
 .leaflet-container {
