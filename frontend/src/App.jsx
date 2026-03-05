@@ -63,19 +63,42 @@ function parseIncoming(raw) {
 }
 
 function parseGpsCoordinates(value) {
+  const parsed = parseGpsData(value);
+  if (!parsed || parsed.latitude == null || parsed.longitude == null) {
+    return null;
+  }
+
+  return [parsed.latitude, parsed.longitude];
+}
+
+function parseGpsData(value) {
   if (typeof value !== "string") {
     return null;
   }
 
-  const [latText, lonText] = value.split(",");
-  const latitude = Number.parseFloat(latText?.trim() || "");
-  const longitude = Number.parseFloat(lonText?.trim() || "");
+  const parts = value.split(",").map((part) => part.trim());
+  if (parts.length !== 2 && parts.length !== 3) {
+    return null;
+  }
+
+  const hasSats = parts.length === 3;
+  const satsText = hasSats ? parts[0] : "";
+  const latText = hasSats ? parts[1] : parts[0];
+  const lonText = hasSats ? parts[2] : parts[1];
+
+  const satellites = hasSats ? Number.parseInt(satsText || "", 10) : null;
+  const latitude = Number.parseFloat(latText || "");
+  const longitude = Number.parseFloat(lonText || "");
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return null;
   }
 
-  return [latitude, longitude];
+  return {
+    satellites: Number.isFinite(satellites) ? satellites : null,
+    latitude,
+    longitude,
+  };
 }
 
 function parseDirectionDegrees(value) {
@@ -191,32 +214,72 @@ function buildBuoyState(current, payload, rawText) {
 
 function extractTelemetryDetails(entry) {
   const payload = parseIncoming(entry.message || "");
-  if (!payload) {
+  if (payload) {
+    const buoyId = payload.buoyId || payload.buoy_id || entry.clientId || "unknown";
+    let satellites = null;
+    let latitude = null;
+    let longitude = null;
+
+    if (typeof payload.gps === "string") {
+      const parsedGps = parseGpsData(payload.gps);
+      if (parsedGps) {
+        satellites = parsedGps.satellites;
+        latitude = String(parsedGps.latitude);
+        longitude = String(parsedGps.longitude);
+      }
+    } else if (payload.lat != null || payload.lon != null) {
+      latitude = String(payload.lat ?? "");
+      longitude = String(payload.lon ?? "");
+    }
+
+    const compass = payload.compass ?? "waiting";
+
+    if (!latitude && !longitude && payload.gps == null && payload.lat == null && payload.lon == null && payload.compass == null) {
+      return null;
+    }
+
+    return {
+      buoyId,
+      satellites,
+      latitude: latitude || "waiting",
+      longitude: longitude || "waiting",
+      compass: String(compass),
+    };
+  }
+
+  const compactMessage = String(entry.message || "").trim();
+  const satsMatch = compactMessage.match(/sats\s*=\s*(\d+)/i);
+  const gpsMatch = compactMessage.match(/gps\s*=\s*([^\s;]+)/i);
+  if (!satsMatch && !gpsMatch) {
     return null;
   }
 
-  const buoyId = payload.buoyId || payload.buoy_id || entry.clientId || "unknown";
-  let latitude = null;
-  let longitude = null;
+  let latitude = "waiting";
+  let longitude = "waiting";
+  let satellites = null;
 
-  if (typeof payload.gps === "string") {
-    [latitude, longitude] = payload.gps.split(",").map((value) => value?.trim() || "");
-  } else if (payload.lat != null || payload.lon != null) {
-    latitude = String(payload.lat ?? "");
-    longitude = String(payload.lon ?? "");
+  if (satsMatch) {
+    const parsedSats = Number.parseInt(satsMatch[1], 10);
+    satellites = Number.isFinite(parsedSats) ? parsedSats : null;
   }
 
-  const compass = payload.compass ?? "waiting";
-
-  if (!latitude && !longitude && payload.gps == null && payload.lat == null && payload.lon == null && payload.compass == null) {
-    return null;
+  if (gpsMatch) {
+    const parsedGps = parseGpsData(gpsMatch[1]);
+    if (parsedGps) {
+      latitude = String(parsedGps.latitude);
+      longitude = String(parsedGps.longitude);
+      if (satellites == null) {
+        satellites = parsedGps.satellites;
+      }
+    }
   }
 
   return {
-    buoyId,
-    latitude: latitude || "waiting",
-    longitude: longitude || "waiting",
-    compass: String(compass),
+    buoyId: entry.clientId || "unknown",
+    satellites,
+    latitude,
+    longitude,
+    compass: "waiting",
   };
 }
 
@@ -235,7 +298,8 @@ function formatLogEntry(entry) {
   if (entry.event === "message") {
     const telemetry = extractTelemetryDetails(entry);
     if (telemetry) {
-      return `Time: ${time || "--:--:--"}; ID: ${telemetry.buoyId}; Lat: ${telemetry.latitude} Lon: ${telemetry.longitude}; Compass: ${formatCompassDisplay(telemetry.compass)}`;
+      const satsDisplay = telemetry.satellites == null ? "waiting" : String(telemetry.satellites);
+      return `Time: ${time || "--:--:--"}; ID: ${telemetry.buoyId}; Sats: ${satsDisplay}; Lat: ${telemetry.latitude} Lon: ${telemetry.longitude}; Compass: ${formatCompassDisplay(telemetry.compass)}`;
     }
 
     return `Time: ${time || "--:--:--"}; ID: ${entry.clientId || "unknown"}; Message: ${entry.message || ""}`;
@@ -466,15 +530,8 @@ function DashboardView({ boeys }) {
                 )}
               </div>
 
-              <div className="mini-status">
-                <div className="mini-field">
-                  <span>GPS</span>
-                  <strong>{String(boey.gps)}</strong>
-                </div>
-                <div className="mini-field">
-                  <span>Compass</span>
-                  <strong>{String(boey.compass)}</strong>
-                </div>
+              <div className="mini-status-line">
+                {`Sat: ${parseGpsData(boey.gps)?.satellites ?? "waiting"} | GPS: ${String(boey.gps)} | Compass: ${String(boey.compass)}`}
               </div>
             </article>
           ))}

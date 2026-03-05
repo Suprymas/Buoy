@@ -89,8 +89,14 @@ func (s *Server) handleTelemetry(c *client.Client, message []byte) {
 		return
 	}
 
-	log.Printf("[MSG] %s @ %s: %s", c.ID, time.Now().Format("15:04:05"), string(message))
-	s.addLog("info", "message", c.ID, string(message))
+	sats, hasSats := parseSatelliteCount(payload.GPS)
+	if hasSats {
+		log.Printf("[MSG] %s @ %s sats=%d gps=%s", c.ID, time.Now().Format("15:04:05"), sats, payload.GPS)
+		s.addLog("info", "message", c.ID, fmt.Sprintf("sats=%d gps=%s", sats, payload.GPS))
+	} else {
+		log.Printf("[MSG] %s @ %s: %s", c.ID, time.Now().Format("15:04:05"), string(message))
+		s.addLog("info", "message", c.ID, string(message))
+	}
 
 	s.mu.Lock()
 	existing := s.latest[payload.BuoyID]
@@ -303,17 +309,38 @@ func parseTelemetryPayload(clientID string, message []byte) (telemetryMessage, b
 
 func parseGPSString(value string) (float64, float64) {
 	parts := strings.Split(value, ",")
-	if len(parts) != 2 {
+	if len(parts) != 2 && len(parts) != 3 {
 		return 0, 0
 	}
 
-	lat, errLat := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
-	lon, errLon := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+	latIndex := 0
+	lonIndex := 1
+	if len(parts) == 3 {
+		latIndex = 1
+		lonIndex = 2
+	}
+
+	lat, errLat := strconv.ParseFloat(strings.TrimSpace(parts[latIndex]), 64)
+	lon, errLon := strconv.ParseFloat(strings.TrimSpace(parts[lonIndex]), 64)
 	if errLat != nil || errLon != nil {
 		return 0, 0
 	}
 
 	return lat, lon
+}
+
+func parseSatelliteCount(value string) (int, bool) {
+	parts := strings.Split(value, ",")
+	if len(parts) < 1 {
+		return 0, false
+	}
+
+	sats, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, false
+	}
+
+	return sats, true
 }
 
 func defaultString(value string, fallback string) string {
