@@ -530,8 +530,19 @@ function DashboardView({ boeys }) {
                 )}
               </div>
 
-              <div className="mini-status-line">
-                {`Sat: ${parseGpsData(boey.gps)?.satellites ?? "waiting"} | GPS: ${String(boey.gps)} | Compass: ${String(boey.compass)}`}
+              <div className="mini-status">
+                <div className="mini-field">
+                  <span>Sat</span>
+                  <strong>{parseGpsData(boey.gps)?.satellites ?? "waiting"}</strong>
+                </div>
+                <div className="mini-field">
+                  <span>GPS</span>
+                  <strong>{String(boey.gps)}</strong>
+                </div>
+                <div className="mini-field">
+                  <span>Compass</span>
+                  <strong>{String(boey.compass)}</strong>
+                </div>
               </div>
             </article>
           ))}
