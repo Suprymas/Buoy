@@ -96,8 +96,8 @@ func (s *Server) handleTelemetry(c *client.Client, message []byte) {
 	}
 	sats, hasSats := parseSatelliteCount(satSource)
 	if hasSats {
-		log.Printf("[MSG] %s @ %s sats=%d gps=%s", c.ID, time.Now().Format("15:04:05"), sats, payload.GPS)
-		s.addLog("info", "message", c.ID, fmt.Sprintf("sats=%d gps=%s", sats, payload.GPS))
+		log.Printf("[MSG] %s @ %s sats=%d gps=%s compass=%s", c.ID, time.Now().Format("15:04:05"), sats, payload.GPS, payload.Compass)
+		s.addLog("info", "message", c.ID, fmt.Sprintf("sats=%d gps=%s compass=%s", sats, payload.GPS, payload.Compass))
 	} else {
 		log.Printf("[MSG] %s @ %s: %s", c.ID, time.Now().Format("15:04:05"), string(message))
 		s.addLog("info", "message", c.ID, string(message))

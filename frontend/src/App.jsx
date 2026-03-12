@@ -270,13 +270,15 @@ function extractTelemetryDetails(entry) {
   const compactMessage = String(entry.message || "").trim();
   const satsMatch = compactMessage.match(/sats\s*=\s*(\d+)/i);
   const gpsMatch = compactMessage.match(/gps\s*=\s*([^\s;]+)/i);
-  if (!satsMatch && !gpsMatch) {
+  const compassMatch = compactMessage.match(/compass\s*=\s*([^\s;]+)/i);
+  if (!satsMatch && !gpsMatch && !compassMatch) {
     return null;
   }
 
   let latitude = "waiting";
   let longitude = "waiting";
   let satellites = null;
+  let compass = "waiting";
 
   if (satsMatch) {
     const parsedSats = Number.parseInt(satsMatch[1], 10);
@@ -294,12 +296,16 @@ function extractTelemetryDetails(entry) {
     }
   }
 
+  if (compassMatch) {
+    compass = compassMatch[1];
+  }
+
   return {
     buoyId: entry.clientId || "unknown",
     satellites,
     latitude,
     longitude,
-    compass: "waiting",
+    compass,
   };
 }
 
