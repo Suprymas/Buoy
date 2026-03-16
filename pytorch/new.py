@@ -27,16 +27,24 @@ def calculate_direction_with_cloud_master(img_path1, img_path2):
             points = np.array([[p.x, p.y] for p in prediction.points], dtype=np.int32)
             cv2.fillPoly(cloud_mask, [points], 255)
         else:
-            x, y, bw, bh = prediction.x, prediction.y, prediction.width, prediction.height
+            x, y, bw, bh = (
+                prediction.x,
+                prediction.y,
+                prediction.width,
+                prediction.height,
+            )
             cv2.rectangle(
                 cloud_mask,
                 (int(x - bw / 2), int(y - bh / 2)),
                 (int(x + bw / 2), int(y + bh / 2)),
-                255, -1,
+                255,
+                -1,
             )
 
     if not np.any(cloud_mask):
         return "Model did not detect any clouds."
+
+    cv2.imwrite("cloud_mask.jpg", cloud_mask)
 
     # ── 2. OPTICAL FLOW ───────────────────────────────────────────────────────
     gray1 = cv2.GaussianBlur(cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY), (7, 7), 0)
@@ -68,7 +76,9 @@ def calculate_direction_with_cloud_master(img_path1, img_path2):
     if not np.any(final_mask):
         return "Clouds found, but no meaningful movement detected."
 
-    print(f"--- DEBUG: Using {final_mask.sum()} pixels for direction (motion threshold={motion_threshold:.3f}) ---")
+    print(
+        f"--- DEBUG: Using {final_mask.sum()} pixels for direction (motion threshold={motion_threshold:.3f}) ---"
+    )
 
     # ── 4. CORRECT ANGLE CALCULATION ─────────────────────────────────────────
     # WRONG: np.median(ang) - circular data median is meaningless
@@ -84,12 +94,16 @@ def calculate_direction_with_cloud_master(img_path1, img_path2):
     dominant_angle_deg = np.degrees(np.arctan2(mean_y, mean_x)) % 360
 
     avg_speed = np.mean(weights)
-    print(f"--- DEBUG: Mean flow X={mean_x:.3f} (+ = right), Y={mean_y:.3f} (+ = down) ---")
+    print(
+        f"--- DEBUG: Mean flow X={mean_x:.3f} (+ = right), Y={mean_y:.3f} (+ = down) ---"
+    )
     print(f"--- DEBUG: Avg cloud speed = {avg_speed:.3f} px/frame ---")
 
     # ── 5. DIAGNOSTIC IMAGE ───────────────────────────────────────────────────
     diagnostic_img = img1.copy()
-    diagnostic_img[~final_mask] = (diagnostic_img[~final_mask] * 0.3).astype(np.uint8)  # dim non-tracked areas
+    diagnostic_img[~final_mask] = (diagnostic_img[~final_mask] * 0.3).astype(
+        np.uint8
+    )  # dim non-tracked areas
 
     # Draw direction arrow
     cx, cy = w // 2, h // 2
@@ -101,7 +115,9 @@ def calculate_direction_with_cloud_master(img_path1, img_path2):
 
     # Label
     label = f"{dominant_angle_deg:.1f} deg  |  0=Right 90=Down 180=Left 270=Up"
-    cv2.putText(diagnostic_img, label, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+    cv2.putText(
+        diagnostic_img, label, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2
+    )
 
     cv2.imwrite("tracking_diagnostic.jpg", diagnostic_img)
     print("Saved tracking_diagnostic.jpg")
@@ -110,7 +126,9 @@ def calculate_direction_with_cloud_master(img_path1, img_path2):
 
 
 # --- EXECUTION ---
-heading = calculate_direction_with_cloud_master("Image15.png", "Image16.png")
+heading = calculate_direction_with_cloud_master(
+    "images/Image15.png", "images/Image16.png"
+)
 
 if isinstance(heading, (int, float)):
     print(f"\nCloud-Master Heading: {heading:.2f} degrees")
