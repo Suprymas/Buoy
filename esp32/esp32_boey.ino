@@ -2,7 +2,8 @@
 #include <WebSocketsClient.h>
 #include "esp_camera.h"
 #include <Wire.h>
-
+#include <TinyGPS++.h>
+#include <QMC5883LCompass.h>
 /* ================= CAMERA PINS ================= */
 
 #define PWDN_GPIO_NUM   -1
@@ -28,22 +29,24 @@
 #define COMPASS_ADDR 0x1E
 #define SDA_PIN 5
 #define SCL_PIN 6
+QMC5883LCompass compass;
+
 
 /* ================= GPS ================= */
 
-#define GPS_RX 43
-#define GPS_TX 44
+#define GPS_RX 44
+#define GPS_TX 43
 
 HardwareSerial GPS(1);
-
+TinyGPSPlus gps;
 /* ================= WIFI ================= */
 
-static const char* WIFI_SSID = "NojusS24";
-static const char* WIFI_PASSWORD = "slaptaszodis";
+static const char* WIFI_SSID = "Internetas";
+static const char* WIFI_PASSWORD = "12345678";
 
 /* ================= WEBSOCKET ================= */
 
-static const char* WS_HOST = "192.168.148.15";
+static const char* WS_HOST = "10.249.211.51";
 static const uint16_t WS_PORT = 8080;
 static const char* WS_PATH = "/ws";
 
@@ -100,14 +103,17 @@ void setup() {
   Serial.print("PSRAM: ");
   Serial.println(psramFound());
 
-  /* I2C Compass */
-
-  Wire.begin(SDA_PIN, SCL_PIN);
+  /* QMC5883 
+     Used HGLRC M100 compass, Make sure to calibrate it.
+  */
+  compass.init();
+  compass.setCalibrationOffsets(-65.00, 560.00, -7.00);
+  compass.setCalibrationScales(1.00, 1.02, 0.98);
   Serial.println("Compass started");
 
   /* GPS UART */
 
-  GPS.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
+  GPS.begin(115200, SERIAL_8N1, GPS_RX, GPS_TX);
   Serial.println("GPS started");
 
   if (!initCamera()) {
@@ -122,7 +128,6 @@ void setup() {
 /* ================= LOOP ================= */
 
 void loop() {
-
   webSocket.loop();
   readGPS();
 
@@ -308,104 +313,26 @@ String buildTelemetryJson() {
 /* ================= COMPASS ================= */
 
 String readCompass() {
+	compass.read();
+	
+	int a = compass.getAzimuth();
+	int flippedAzimuth = 360 - a;
+  if (flippedAzimuth >= 360) flippedAzimuth -= 360;
 
-  int16_t x,y,z;
-
-  Wire.beginTransmission(COMPASS_ADDR);
-  Wire.write(0x03);
-  Wire.endTransmission();
-
-  Wire.requestFrom(COMPASS_ADDR,6);
-
-  if (Wire.available()==6) {
-
-    x = Wire.read()<<8 | Wire.read();
-    z = Wire.read()<<8 | Wire.read();
-    y = Wire.read()<<8 | Wire.read();
-
-    float heading = atan2((float)y,(float)x)*180/PI;
-
-    if (heading < 0)
-      heading += 360;
-
-    return String(heading,1);
-  }
-
-  return "0";
+  return String(flippedAzimuth);
 }
 
 /* ================= GPS ================= */
 
 void readGPS() {
-
-  static String line="";
-
   while (GPS.available()) {
-
-    char c = GPS.read();
-
-    if (c == '\n') {
-
-      parseGPS(line);
-      line="";
-    }
-    else
-      line += c;
+    gps.encode(GPS.read());
+  }
+  
+  if (gps.location.isUpdated()) {
+    gpsLat = gps.location.lat();
+    gpsLon = gps.location.lng();
+    gpsSats = String(gps.satellites.value());
   }
 }
 
-void parseGPS(String line) {
-
-  if (!line.startsWith("$GPGGA"))
-    return;
-
-  int field=0;
-  int last=0;
-  String values[15];
-
-  for(int i=0;i<line.length();i++){
-
-    if(line[i]==','){
-
-      values[field++]=line.substring(last,i);
-      last=i+1;
-    }
-  }
-
-  values[field]=line.substring(last);
-
-  String rawLat=values[2];
-  String latDir=values[3];
-
-  String rawLon=values[4];
-  String lonDir=values[5];
-
-  if(rawLat.length()>0 && rawLon.length()>0){
-
-    gpsLat=nmeaToDecimal(rawLat,latDir);
-    gpsLon=nmeaToDecimal(rawLon,lonDir);
-  }
-
-  if(values[7].length()>0)
-    gpsSats=values[7];
-}
-
-/* ================= GPS CONVERSION ================= */
-
-float nmeaToDecimal(String raw,String dir){
-
-  if(raw.length()<6)
-    return 0;
-
-  float val=raw.toFloat();
-
-  int degrees=int(val/100);
-  float minutes=val-(degrees*100);
-
-  float decimal=degrees+minutes/60.0;
-
-  if(dir=="S"||dir=="W")
-    decimal*=-1;
-
-  return decimal;
-}
