@@ -1,18 +1,18 @@
 # Buoy system
 
-This repository is meant for Bouy devices which measure windspeed, direction, track gps and take pictures. The idea is that there could be several bouys which would predict upcoming wind changes. This would help autonomous sailing boats pick better routes.
+This repository is meant for Buoy devices which measure windspeed, direction, track gps and take pictures. The idea is that there could be several buoys which would predict upcoming wind changes. This would help autonomous sailing boats pick better routes.
 
 ## Project contents
 
-In the [internal](./internal/) folder you will find the Golang code for the main web server. The purpose of this server is to gather data from mulitple bouys. It would host a websocket server and allow bouys to send that data though it.
+In the [internal](./internal/) folder you will find the Golang code for the main web server. The purpose of this server is to gather data from multiple buoys. It would host a Web socket server and allow buoys to send that data though it.
 
 
-In the [esp32](./esp32/) folder you will find [esp_32_boey.ino](./esp32/esp32_boey.ino) which should be uploaded to each bouy. **It is important to change the bouy Id before uploading the code**.
+In the [esp32](./esp32/) folder you will find [esp_32_boey.ino](./esp32/esp32_boey.ino) which should be uploaded to each buoy. **It is important to change the buoy Id before uploading the code**.
 
 **Device used: [Seeed Studio XIAO ESP32-S3 Sense](https://wiki.seeedstudio.com/xiao_esp32s3_getting_started/)**
 
 
-In the [frontend](./frontend/) a simple React dashboard to display the latest datas from the Bouys. A map which displays the buoys and the latest images from them.
+In the [frontend](./frontend/) a simple React dashboard to display the latest datas from the Buoys. A map which displays the buoys and the latest images from them.
 
 In [migrations](./migrations/) folder you will find the schema of the **Timescaledb**.
 
@@ -47,7 +47,7 @@ DB_NAME=buoydb
 
 Build the image:
 ```sh
-docker build -t bouy-image .
+docker build -t buoy-image .
 ```
 And then run:
 ```sh

@@ -34,7 +34,7 @@ services:
       - minio_data:/data
 
   server:
-    image: bouy
+    image: buoy
     ports:
       - "8080:8080"
     depends_on:
