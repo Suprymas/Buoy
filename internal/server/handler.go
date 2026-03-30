@@ -154,6 +154,7 @@ func (s *Server) handleImage(c *client.Client, message []byte) {
 		BuoyID:    buoyID,
 		Latitude:  state.Latitude,
 		Longitude: state.Longitude,
+		Heading:   state.Heading,
 		ImageURL:  url,
 	}); err != nil {
 		log.Printf("Failed to save image reading for %s: %v", buoyID, err)
@@ -234,85 +235,47 @@ func clientRole(r *http.Request) string {
 
 func parseTelemetryPayload(clientID string, message []byte) (telemetryMessage, buoyState, db.Reading, bool) {
 	var live telemetryMessage
-	if err := json.Unmarshal(message, &live); err == nil && (live.BuoyID != "" || live.GPS != "" || live.Sats != "" || live.Compass != "" || live.Status != "") {
-		if live.BuoyID == "" {
-			live.BuoyID = clientID
-		}
-		if live.Status == "" {
-			live.Status = "online"
-		}
 
-		lat, lon := parseGPSString(live.GPS)
-		state := buoyState{
-			Snapshot: buoySnapshot{
-				ID:       live.BuoyID,
-				BuoyID:   live.BuoyID,
-				Status:   live.Status,
-				GPS:      defaultString(live.GPS, "waiting"),
-				Sats:     defaultString(live.Sats, "waiting"),
-				Compass:  defaultString(live.Compass, "waiting"),
-				ImageURL: live.ImageURL,
-			},
-			Latitude:  lat,
-			Longitude: lon,
-		}
-
-		reading := db.Reading{
-			Time:      time.Now().UTC(),
-			BuoyID:    live.BuoyID,
-			Latitude:  lat,
-			Longitude: lon,
-			ImageURL:  live.ImageURL,
-		}
-
-		return live, state, reading, true
+	err := json.Unmarshal(message, &live)
+	if err != nil || (live.BuoyID == "" && live.GPS == "" && live.Compass == "") {
+		return telemetryMessage{}, buoyState{}, db.Reading{}, false
+	}
+	if live.BuoyID == "" {
+		live.BuoyID = clientID
+	}
+	if live.Status == "" {
+		live.Status = "online"
 	}
 
-	var legacy GPSMessage
-	if err := json.Unmarshal(message, &legacy); err == nil && (legacy.BuoyID != "" || legacy.Latitude != 0 || legacy.Longitude != 0) {
-		buoyID := legacy.BuoyID
-		if buoyID == "" {
-			buoyID = clientID
-		}
+	lat, lon := parseGPSString(live.GPS)
 
-		gps := fmt.Sprintf("%f,%f", legacy.Latitude, legacy.Longitude)
-		live = telemetryMessage{
-			BuoyID:  buoyID,
-			Status:  "online",
-			GPS:     gps,
-			Sats:    "waiting",
-			Compass: "waiting",
-		}
+	headingVal, _ := strconv.ParseFloat(live.Compass, 64)
 
-		state := buoyState{
-			Snapshot: buoySnapshot{
-				ID:      buoyID,
-				BuoyID:  buoyID,
-				Status:  "online",
-				GPS:     gps,
-				Sats:    "waiting",
-				Compass: "waiting",
-			},
-			Latitude:  legacy.Latitude,
-			Longitude: legacy.Longitude,
-		}
-
-		readingTime := time.Now().UTC()
-		if legacy.Timestamp > 0 {
-			readingTime = time.Unix(legacy.Timestamp, 0).UTC()
-		}
-
-		reading := db.Reading{
-			Time:      readingTime,
-			BuoyID:    buoyID,
-			Latitude:  legacy.Latitude,
-			Longitude: legacy.Longitude,
-		}
-
-		return live, state, reading, true
+	state := buoyState{
+		Snapshot: buoySnapshot{
+			ID:       live.BuoyID,
+			BuoyID:   live.BuoyID,
+			Status:   live.Status,
+			GPS:      defaultString(live.GPS, "waiting"),
+			Sats:     defaultString(live.Sats, "waiting"),
+			Compass:  defaultString(live.Compass, "waiting"),
+			ImageURL: live.ImageURL,
+		},
+		Heading:   headingVal,
+		Latitude:  lat,
+		Longitude: lon,
 	}
 
-	return telemetryMessage{}, buoyState{}, db.Reading{}, false
+	reading := db.Reading{
+		Time:      time.Now().UTC(),
+		BuoyID:    live.BuoyID,
+		Latitude:  lat,
+		Longitude: lon,
+		Heading:   headingVal,
+		ImageURL:  live.ImageURL,
+	}
+
+	return live, state, reading, true
 }
 
 func parseGPSString(value string) (float64, float64) {

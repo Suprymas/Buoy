@@ -24,6 +24,7 @@ type buoyState struct {
 	Snapshot  buoySnapshot
 	Latitude  float64
 	Longitude float64
+	Heading   float64
 }
 
 func (s *Server) BuoysHandler(w http.ResponseWriter, r *http.Request) {

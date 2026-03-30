@@ -7,9 +7,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: buoydb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d buoydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - timescale_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d  # runs SQL on first start
+      - ./migrations:/docker-entrypoint-initdb.d # runs SQL on first start
 
   minio:
     image: minio/minio
@@ -20,8 +25,32 @@ services:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password123
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - minio_data:/data
+
+  server:
+    image: bouy
+    ports:
+      - "8080:8080"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: buoydb
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: password123
 
 volumes:
   timescale_data:

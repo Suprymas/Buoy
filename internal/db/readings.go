@@ -12,15 +12,16 @@ type Reading struct {
 	BuoyID    string
 	Latitude  float64
 	Longitude float64
+	Heading   float64
 	ImageURL  string
 }
 
 // InsertReading saves a GPS reading to TimescaleDB
 func (db *DB) InsertReading(ctx context.Context, r Reading) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO buoy_readings (time, buoy_id, latitude, longitude, image_url)
-		VALUES ($1, $2, $3, $4, $5)
-	`, r.Time, r.BuoyID, r.Latitude, r.Longitude, r.ImageURL)
+		INSERT INTO buoy_readings (time, buoy_id, latitude, longitude, image_url, heading)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, r.Time, r.BuoyID, r.Latitude, r.Longitude, r.ImageURL, r.Heading)
 
 	if err != nil {
 		return fmt.Errorf("insert reading failed: %w", err)

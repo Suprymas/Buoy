@@ -1,18 +1,12 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
--- Buoy metadata (regular table, not time-series)
-CREATE TABLE IF NOT EXISTS buoys (
-    id           TEXT PRIMARY KEY,
-    name         TEXT,
-    registered_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- GPS readings (time-series — will become a hypertable)
 CREATE TABLE IF NOT EXISTS buoy_readings (
     time        TIMESTAMPTZ     NOT NULL,
     buoy_id     TEXT            NOT NULL,
     latitude    DOUBLE PRECISION NOT NULL,
     longitude   DOUBLE PRECISION NOT NULL,
+    heading     DOUBLE PRECISION,
     image_url   TEXT
 );
 
