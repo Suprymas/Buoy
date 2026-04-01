@@ -59,3 +59,26 @@ And then run:
 ```sh
 docker compose up
 ```
+
+## Web app
+
+A React web app has three pages: Dashboard, Map, and Logs.
+
+### Dashboard
+
+<img width="1829" height="927" alt="dashboard" src="https://github.com/user-attachments/assets/dd72bc04-9a1a-4a05-9b5c-01ee0e2b26fd" />
+You can see the buoy name, live camera feed, gps and compass readings.
+
+### Map
+
+<img width="1861" height="927" alt="map" src="https://github.com/user-attachments/assets/d58a0ecd-4a01-46eb-a952-56ec6e57d482" />
+You can see a map on which all buoys are placed. The arrow indicates the wind direction of each buoy.
+
+### Logs
+
+<img width="1856" height="930" alt="logs" src="https://github.com/user-attachments/assets/48468e2c-d8b3-42f6-95c8-0c37eea2e41e" />
+You can see the live feed of all data sent from buoys.
+
+
+
+
