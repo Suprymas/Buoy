@@ -4,11 +4,11 @@
 
 The files are provided in three formats: SLDPRT, STEP and STL.
 
-SLDPRT - Contains SOLIDWORKS (2025 SP5 version) files. Used to modify the models in SOLIDWORKS.
+SLDPRT - Contains SOLIDWORKS .SLDPRT (2025 SP5 version) files. Used to modify the models in SOLIDWORKS.
 
 STEP - Contains .STEP files. Used to slightly modify files with other programs.
 
-STL - Containts printing files. Used for printing the models.
+STL - Containts .STL files. Used for printing the models.
 
 ## Files
 
