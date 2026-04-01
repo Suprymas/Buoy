@@ -14,7 +14,7 @@
 
 # Dependency directory
 vendor/
-pytorch/.venv/
+imageProcessing/.venv/
 
 # Go workspace file
 go.work

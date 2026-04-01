@@ -3,7 +3,7 @@ import numpy as np
 from inference import get_model
 
 # --- CONFIGURATION ---
-ROBOFLOW_API_KEY = "Xd3fGjPQkJQf1JtSLqJN"
+ROBOFLOW_API_KEY = "**************"
 MODEL_ID = "cloud-master-1.1/1"
 
 model = get_model(model_id=MODEL_ID, api_key=ROBOFLOW_API_KEY)
