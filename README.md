@@ -62,7 +62,12 @@ docker compose up
 
 ## Web app
 
-A React web app has three pages: Dashboard, Map, and Logs.
+### Starting
+
+To run the web app go to the the [frontend](./frontend/) folder and run:
+```
+npm run dev
+```
 
 ### Dashboard
 
