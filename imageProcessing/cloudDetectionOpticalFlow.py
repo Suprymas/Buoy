@@ -4,7 +4,7 @@ from inference import get_model
 
 # --- CONFIGURATION ---
 # Replace with your actual Roboflow API Key
-ROBOFLOW_API_KEY = "Xd3fGjPQkJQf1JtSLqJN"
+ROBOFLOW_API_KEY = "*************"
 MODEL_ID = "cloud-master-1.1/1"  # This matches the link you provided
 
 # Load the cloud-specific model
@@ -135,4 +135,3 @@ if isinstance(heading, (int, float)):
 else:
     # This will print: "Cloud-Master found no clouds in this frame."
     print(f"Result: {heading}")
-
