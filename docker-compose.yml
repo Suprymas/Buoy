@@ -37,7 +37,7 @@ services:
     image: buoy
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.server
     ports:
       - "8080:8080"
     depends_on:
@@ -54,6 +54,21 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: password123
+
+  frontend:
+    image: buoy-dashboard-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_BACKEND_BASE_URL=http://server:8080
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev -- --host
 
 volumes:
   timescale_data:

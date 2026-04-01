@@ -33,9 +33,6 @@ function createSocketHostLabel() {
   return createHttpBaseUrl().replace(/^https?:\/\//, "");
 }
 
-function createApiUrl(path) {
-  return `${createHttpBaseUrl()}${path}`;
-}
 
 function resolveImageUrl(imageUrl) {
   if (!imageUrl) {
@@ -215,7 +212,7 @@ function buildBuoyState(current, payload, rawText) {
   const nextCompass = readTelemetryValue(payload.compass, telemetry.compass, existing.compass) ?? "waiting";
   const nextImageUrl = payload.imageBase64
     ? `data:image/jpeg;base64,${payload.imageBase64}`
-    : resolveImageUrl(payload.imageUrl) || existing.imageUrl;
+    : payload.imageUrl || existing.imageUrl;
 
   return {
     ...current,
@@ -401,7 +398,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(createApiUrl("/health"))
+    fetch("/health")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`health request failed: ${response.status}`);
@@ -419,7 +416,7 @@ export default function App() {
         }
       });
 
-    fetch(createApiUrl("/logs"))
+    fetch("/logs")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`logs request failed: ${response.status}`);
@@ -438,7 +435,7 @@ export default function App() {
         }
       });
 
-    fetch(createApiUrl("/api/buoys"))
+    fetch("/api/buoys")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`buoys request failed: ${response.status}`);
