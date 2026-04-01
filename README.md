@@ -1,6 +1,12 @@
 # Buoy system
 
-This repository is meant for Buoy devices which measure windspeed, direction, track gps and take pictures. The idea is that there could be several buoys which would predict upcoming wind changes. This would help autonomous sailing boats pick better routes.
+This repository contains the codebase for the Buoy project, which is designed to monitor environmental conditions and predict upcoming wind shifts. The primary goal is to provide this information to sailing vessels, allowing them to anticipate changes in wind direction and optimize their routes accordingly.
+
+Each buoy is built around the XIAO ESP32S3 platform and integrates several key components. A GPS module is used to determine the precise location of each buoy, enabling accurate mapping and tracking. A compass sensor provides orientation data, allowing the system to infer wind direction based on how the buoy is positioned relative to external forces. Additionally, a wind speed sensor measures real-time wind intensity, giving further context to the environmental conditions.
+
+The ESP32S3’s onboard camera is used to stream a live visual feed from the buoy. This visual data plays an important role in the project’s core idea: analyzing cloud movement to predict wind shifts. By observing the direction and behavior of clouds over time, the system attempts to estimate how wind patterns are likely to change in the near future.
+
+Currently, all collected data is transmitted to a central web server, where it is processed and made accessible through a web application built with React. The application provides a real-time interface for interacting with the system: users can view live camera feeds from each buoy, monitor sensor data streams, and observe buoy positions on a map along with their current orientation. Additionally, a live logging interface displays incoming data from the buoys, allowing for debugging and monitoring.
 
 ## Project contents
 
