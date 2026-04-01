@@ -62,13 +62,6 @@ docker compose up
 
 ## Web app
 
-### Starting
-
-To run the web app go to the the [frontend](./frontend/) folder and run:
-```
-npm run dev
-```
-
 ### Dashboard
 
 <img width="1829" height="927" alt="dashboard" src="https://github.com/user-attachments/assets/dd72bc04-9a1a-4a05-9b5c-01ee0e2b26fd" />
