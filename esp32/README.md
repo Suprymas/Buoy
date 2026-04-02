@@ -13,8 +13,8 @@ static const char* BUOY_ID = "buoy-01";
 The ESP32 needs to connect to a Wi-Fi hotspot to send data. To set that up, WIFI_SSID and WIFI_PASSWORD should be changed to the SSID and password of your hotspot.
 
 ```
-static const char* WIFI_SSID = "Internetas";
-static const char* WIFI_PASSWORD = "12345678";
+static const char* WIFI_SSID = "*******";
+static const char* WIFI_PASSWORD = "*******";
 ```
 
 ## Websocket
@@ -24,3 +24,7 @@ The ESP32 sends data to a WebSocket at an IP address defined by WS_HOST. Change 
 ```
 static const char* WS_HOST = "10.249.211.51";
 ```
+
+## Troubleshooting
+
+If the camera does not work (fails to initialize), you need to enable PSRAM in the Arduino IDE (Tools -> PSRAM -> OPI PSRAM).
