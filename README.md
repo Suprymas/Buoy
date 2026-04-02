@@ -60,6 +60,9 @@ And then run:
 docker compose up
 ```
 
+Then you should start turn on the ESP32 and they should connect to the server if they are on the same wifi.
+Open http://localhost:5173 and there you should see the working buoy dashboard (Web app).
+If you wish to see the images stored open http://localhost:9001.
 ## Web app
 
 ### Dashboard
@@ -77,6 +80,15 @@ You can see a map on which all buoys are placed. The arrow indicates the wind di
 <img width="1856" height="930" alt="logs" src="https://github.com/user-attachments/assets/48468e2c-d8b3-42f6-95c8-0c37eea2e41e" />
 You can see the live feed of all data sent from buoys.
 
+
+## Troubleshooting
+
+### ESP32 is not connecting to server.
+
+Prefer using your phone as a hotspot instead of Eduroam or other more complex networks. When you are sharing from you phone
+enable 2.4Ghz and disable Wifi6. The Esp32 wifi capabilities are not that powerfull.
+Also check if you changed ssid and the password in [./esp32/esp32_boey.ino](./esp32/esp32_boey.ino) lines 44-45.
+Sometimes there could be some problems that Esp32 doesn't connect on first try to the wifi try waiting for few minutes.
 
 
 

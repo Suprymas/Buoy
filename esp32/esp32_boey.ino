@@ -41,8 +41,8 @@ HardwareSerial GPS(1);
 TinyGPSPlus gps;
 /* ================= WIFI ================= */
 
-static const char* WIFI_SSID = "Internetas";
-static const char* WIFI_PASSWORD = "12345678";
+static const char* WIFI_SSID = "*******";
+static const char* WIFI_PASSWORD = "*******";
 
 /* ================= WEBSOCKET ================= */
 
