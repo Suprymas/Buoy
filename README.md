@@ -67,19 +67,20 @@ If you wish to see the images stored open http://localhost:9001.
 
 ### Dashboard
 
-<img width="1113" height="864" alt="dashboard" src="https://github.com/user-attachments/assets/ba88eccf-419f-488d-9cf0-de423af20db0" />
+<img width="1102" height="826" alt="dashboard" src="https://github.com/user-attachments/assets/d1cb1673-9f1f-4581-ba8d-591b0ffb8b45" />
 
-You can see the buoy name, live camera feed, gps and compass readings. (Note: Because the GPS had no fix the GPS readings are 0.000; 0.000)
+
+You can see the buoy name, live camera feed, GPS longitude and latitude, satellite count, and compass readings.
 
 ### Map
 
-<img width="1109" height="682" alt="map" src="https://github.com/user-attachments/assets/af8a2fef-ee39-4ee7-acb0-1a31559bc436" />
+<img width="1109" height="665" alt="map" src="https://github.com/user-attachments/assets/41bd2439-39e8-4c44-aa6e-ebce305c6739" />
 
-You can see a map on which all buoys are placed. The arrow indicates the wind direction of each buoy. (Note: Because the GPS had no fix the GPS readings are 0.000; 0.000)
+You can see a map on which all buoys are placed. The arrow indicates the wind direction of each buoy.
 
 ### Logs
 
-<img width="1090" height="694" alt="logs" src="https://github.com/user-attachments/assets/3982f83e-bb08-4fbc-8960-1c18a7a91f0a" />
+<img width="1094" height="697" alt="image" src="https://github.com/user-attachments/assets/b46abe69-0a02-4cc8-a155-ed3d399da1b3" />
 
 You can see the live feed of all data sent from buoys.
 
