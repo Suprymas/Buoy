@@ -25,7 +25,7 @@ In [migrations](./migrations/) folder you will find the schema of the **Timescal
 In [3d models](./3d%20models) folder you will find models for 3d printing the physical buoy itself in .STL, .STEP and .SLDPRT formats.
 
 ### **WIP:**
-In [pytorch](./pytorch/) folder stuff was started to begin using OpenCV and YOLO to predict the cloud movements. This is yet to be finished. 
+In [imageProcessing](./imageProcessing/) folder stuff was started to begin using OpenCV and YOLO to predict the cloud movements. This is yet to be finished. 
 
 
 ## Docker environment
